@@ -79,6 +79,12 @@ public class AccountService {
                 .collect(Collectors.toList());
     }
 
+    public AccountResponse lookupByAccountNumber(String accountNumber) {
+        Account account = accountRepository.findByAccountNumber(accountNumber)
+                .orElseThrow(() -> new RuntimeException("Account not found"));
+        return AccountResponse.from(account);
+    }
+
     private String generateAccountNumber() {
         String accountNumber;
         do {

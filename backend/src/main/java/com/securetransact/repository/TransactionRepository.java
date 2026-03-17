@@ -16,10 +16,10 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
 
     Optional<Transaction> findByIdempotencyKey(String idempotencyKey);
 
-    @Query("SELECT t FROM Transaction t WHERE t.fromAccount.id = :accountId OR t.toAccount.id = :accountId ORDER BY t.createdAt DESC")
+    @Query("SELECT t FROM Transaction t LEFT JOIN t.fromAccount fa LEFT JOIN t.toAccount ta WHERE fa.id = :accountId OR ta.id = :accountId ORDER BY t.createdAt DESC")
     Page<Transaction> findByAccountId(@Param("accountId") Long accountId, Pageable pageable);
 
-    @Query("SELECT t FROM Transaction t WHERE (t.fromAccount.user.id = :userId OR t.toAccount.user.id = :userId) ORDER BY t.createdAt DESC")
+    @Query("SELECT t FROM Transaction t LEFT JOIN t.fromAccount fa LEFT JOIN fa.user fu LEFT JOIN t.toAccount ta LEFT JOIN ta.user tu WHERE fu.id = :userId OR tu.id = :userId ORDER BY t.createdAt DESC")
     Page<Transaction> findByUserId(@Param("userId") Long userId, Pageable pageable);
 
     Page<Transaction> findByStatus(TransactionStatus status, Pageable pageable);
@@ -43,6 +43,6 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
     long countByStatusSince(@Param("status") TransactionStatus status, @Param("since") LocalDateTime since);
 
     // Statement: transactions for an account within date range
-    @Query("SELECT t FROM Transaction t WHERE (t.fromAccount.id = :accountId OR t.toAccount.id = :accountId) AND t.createdAt BETWEEN :start AND :end ORDER BY t.createdAt DESC")
+    @Query("SELECT t FROM Transaction t LEFT JOIN t.fromAccount fa LEFT JOIN t.toAccount ta WHERE (fa.id = :accountId OR ta.id = :accountId) AND t.createdAt BETWEEN :start AND :end ORDER BY t.createdAt DESC")
     List<Transaction> findByAccountIdAndDateRange(@Param("accountId") Long accountId, @Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
 }

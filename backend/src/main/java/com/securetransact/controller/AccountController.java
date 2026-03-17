@@ -42,6 +42,12 @@ public class AccountController {
         return ResponseEntity.ok(accountService.getAccountsByUser(user.getId()));
     }
 
+    @GetMapping("/lookup")
+    @Operation(summary = "Look up any account by account number")
+    public ResponseEntity<AccountResponse> lookupAccount(@RequestParam String accountNumber) {
+        return ResponseEntity.ok(accountService.lookupByAccountNumber(accountNumber));
+    }
+
     @GetMapping("/{id}")
     @Operation(summary = "Get account details by ID")
     public ResponseEntity<AccountResponse> getAccountDetails(
@@ -55,8 +61,8 @@ public class AccountController {
     public ResponseEntity<List<TransactionResponse>> getStatement(
             @PathVariable Long id,
             @AuthenticationPrincipal CustomUserDetails user,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime start,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime end) {
+            @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss") LocalDateTime start,
+            @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss") LocalDateTime end) {
         return ResponseEntity.ok(accountService.getStatement(id, user.getId(), start, end));
     }
 }

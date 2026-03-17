@@ -109,6 +109,15 @@ public class TransactionService {
             try {
                 transaction.setStatus(TransactionStatus.PROCESSING);
 
+                // Re-validate balance before moving money
+                if ((transaction.getType() == TransactionType.WITHDRAWAL || transaction.getType() == TransactionType.TRANSFER)
+                        && fromAccount.getBalance().compareTo(transaction.getAmount()) < 0) {
+                    transaction.setStatus(TransactionStatus.FAILED);
+                    log.warn("Transaction {} failed: insufficient balance (available: {}, required: {})",
+                            transaction.getId(), fromAccount.getBalance(), transaction.getAmount());
+                    return;
+                }
+
                 switch (transaction.getType()) {
                     case DEPOSIT:
                         toAccount.setBalance(toAccount.getBalance().add(transaction.getAmount()));
