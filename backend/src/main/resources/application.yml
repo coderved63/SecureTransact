@@ -1,8 +1,8 @@
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5432/securetransact
-    username: postgres
-    password: "Turf@122$"
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/securetransact}
+    username: ${SPRING_DATASOURCE_USERNAME:postgres}
+    password: ${SPRING_DATASOURCE_PASSWORD:Turf@122$}
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
@@ -15,11 +15,11 @@ spring:
 
 app:
   jwt:
-    secret: 404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
+    secret: ${APP_JWT_SECRET:404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}
     expiration-ms: 86400000  # 24 hours
 
 server:
-  port: 8080
+  port: ${PORT:8080}
 
 springdoc:
   api-docs:
