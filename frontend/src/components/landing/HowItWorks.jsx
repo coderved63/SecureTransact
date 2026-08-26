@@ -4,27 +4,27 @@ import { motion, useInView } from 'framer-motion';
 const steps = [
   {
     number: '01',
-    title: 'Transaction Initiated',
+    title: 'You Submit a Transaction',
     description:
-      'User submits a deposit, withdrawal, or transfer via the REST API.',
+      'Choose an account, enter an amount, and pick a type — deposit, withdrawal, or transfer. The system validates everything instantly.',
   },
   {
     number: '02',
-    title: 'Risk Engine Analyzes',
+    title: 'Risk Is Evaluated Automatically',
     description:
-      'Five fraud rules evaluate in parallel: amount, velocity, time of day, account age, and transfer patterns.',
+      'Your transaction is scored against multiple risk signals — amount patterns, transaction velocity, time of day, and account history — all in milliseconds.',
   },
   {
     number: '03',
-    title: 'Score Calculated',
+    title: 'Outcome Is Determined',
     description:
-      'Risk score determines outcome: auto-approve, log and approve, flag for review, or block entirely.',
+      'Low-risk transactions settle immediately. Suspicious ones are held for review or blocked, with every decision logged for transparency.',
   },
   {
     number: '04',
-    title: 'Admin Reviews',
+    title: 'Admins Review When Needed',
     description:
-      'Flagged transactions appear in the admin dashboard for manual approval or rejection.',
+      'Flagged activity surfaces in the admin dashboard. Reviewers see the full risk profile and can approve, block, or dismiss with a single click.',
   },
 ];
 
@@ -63,7 +63,7 @@ export default function HowItWorks() {
   return (
     <section
       style={{
-        padding: '120px 24px',
+        padding: isMobile ? '72px 20px' : '120px 24px',
         background: 'var(--bg-secondary)',
       }}
     >
@@ -94,14 +94,14 @@ export default function HowItWorks() {
           style={{
             textAlign: 'center',
             fontFamily: 'var(--font-display)',
-            fontSize: 36,
+            fontSize: isMobile ? 26 : 36,
             fontWeight: 600,
             color: 'var(--text-primary)',
-            marginBottom: 64,
+            marginBottom: isMobile ? 40 : 64,
             lineHeight: 1.25,
           }}
         >
-          How Fraud Detection Works
+          How It Works
         </h2>
 
         {/* Timeline */}
@@ -174,7 +174,7 @@ export default function HowItWorks() {
                   background: 'var(--bg-card)',
                   border: '1px solid var(--border-light)',
                   borderRadius: 'var(--radius-lg)',
-                  padding: 24,
+                  padding: isMobile ? 20 : 24,
                   marginBottom: index < steps.length - 1 ? 20 : 0,
                 }}
               >

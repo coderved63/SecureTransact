@@ -7,25 +7,25 @@ const features = [
     icon: Wallet,
     title: 'Multi-Account Management',
     description:
-      'Create SAVINGS and CHECKING accounts with unique account numbers and real-time balance tracking.',
+      'Open savings and checking accounts instantly. Track balances in real time across all your accounts.',
   },
   {
     icon: ArrowLeftRight,
-    title: 'Smart Transactions',
+    title: 'Instant Transactions',
     description:
-      'Deposits, withdrawals, and transfers with idempotency protection and atomic execution.',
+      'Send deposits, withdrawals, and transfers with confidence. Every transaction is validated and processed atomically.',
   },
   {
     icon: Shield,
-    title: 'AI Fraud Detection',
+    title: 'Intelligent Fraud Detection',
     description:
-      '5-rule scoring engine evaluates risk in real-time. Automatic flagging and blocking of suspicious activity.',
+      'Suspicious activity is caught before it causes harm. Every transaction is scored against multiple risk signals in real time.',
   },
   {
     icon: BarChart3,
     title: 'Admin Control Center',
     description:
-      'Live dashboard metrics, flagged transaction review, and complete account oversight for administrators.',
+      'Live dashboard with transaction metrics, risk case management, and a full audit log of every system action.',
   },
 ];
 
@@ -49,12 +49,15 @@ const cardVariants = {
 
 export default function Features() {
   const [columns, setColumns] = useState(2);
+  const [isMobile, setIsMobile] = useState(false);
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, margin: '-80px' });
 
   useEffect(() => {
     const handleResize = () => {
-      setColumns(window.innerWidth > 768 ? 2 : 1);
+      const mobile = window.innerWidth <= 768;
+      setIsMobile(mobile);
+      setColumns(mobile ? 1 : 2);
     };
     handleResize();
     window.addEventListener('resize', handleResize);
@@ -64,7 +67,7 @@ export default function Features() {
   return (
     <section
       style={{
-        padding: '120px 24px',
+        padding: isMobile ? '72px 20px' : '120px 24px',
         background: 'var(--bg-primary)',
       }}
     >
@@ -95,10 +98,10 @@ export default function Features() {
           style={{
             textAlign: 'center',
             fontFamily: 'var(--font-display)',
-            fontSize: 36,
+            fontSize: isMobile ? 26 : 36,
             fontWeight: 600,
             color: 'var(--text-primary)',
-            marginBottom: 60,
+            marginBottom: isMobile ? 40 : 60,
             lineHeight: 1.25,
           }}
         >
@@ -140,7 +143,7 @@ function FeatureCard({ feature }) {
         background: hovered ? 'var(--bg-card-hover)' : 'var(--bg-card)',
         border: '1px solid var(--border-light)',
         borderRadius: 'var(--radius-lg)',
-        padding: 32,
+        padding: window.innerWidth <= 768 ? 24 : 32,
         cursor: 'default',
         transition: 'background 0.25s ease, box-shadow 0.25s ease, transform 0.25s ease',
         boxShadow: hovered ? 'var(--shadow-md)' : 'none',

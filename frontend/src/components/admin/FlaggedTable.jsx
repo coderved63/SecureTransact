@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowDownLeft, ArrowUpRight, ArrowLeftRight, ChevronLeft, ChevronRight, Inbox, Check, X } from 'lucide-react';
 import StatusBadge from '../dashboard/StatusBadge';
@@ -127,6 +127,81 @@ function SkeletonRow() {
   );
 }
 
+function MobileFlaggedCard({ txn, onReview, isLoading }) {
+  const cfg = typeConfig[txn.type] || typeConfig.TRANSFER;
+  const Icon = cfg.icon;
+
+  return (
+    <div style={{
+      padding: '14px 16px',
+      borderBottom: '1px solid var(--border-light)',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 10,
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span style={{
+            width: 32, height: 32, borderRadius: 8,
+            background: `${cfg.color}18`,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+          }}>
+            <Icon size={14} color={cfg.color} strokeWidth={2.5} />
+          </span>
+          <div>
+            <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', fontFamily: 'var(--font-body)', margin: 0 }}>
+              {cfg.label} · #{txn.id}
+            </p>
+            <p style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'var(--font-body)', margin: 0 }}>
+              {txn.createdAt
+                ? new Date(txn.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+                : '—'}
+            </p>
+          </div>
+        </div>
+        <span style={{
+          fontSize: 14, fontWeight: 700,
+          color: 'var(--text-primary)', fontFamily: 'var(--font-mono)',
+        }}>
+          {fmt(txn.amount)}
+        </span>
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+        <RiskBar score={txn.riskScore} />
+        <StatusBadge status={txn.status} />
+      </div>
+      <div style={{ display: 'flex', gap: 8 }}>
+        <button
+          onClick={() => onReview?.(txn.id, 'APPROVE')}
+          disabled={isLoading}
+          style={{
+            flex: 1, padding: '8px 0', borderRadius: 'var(--radius-sm)',
+            background: 'var(--success-bg)', border: '1px solid var(--success)',
+            color: 'var(--success)', fontSize: 12, fontWeight: 600,
+            cursor: isLoading ? 'not-allowed' : 'pointer',
+            fontFamily: 'var(--font-body)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
+          }}
+        >
+          <Check size={11} strokeWidth={3} /> Approve
+        </button>
+        <button
+          onClick={() => onReview?.(txn.id, 'REJECT')}
+          disabled={isLoading}
+          style={{
+            flex: 1, padding: '8px 0', borderRadius: 'var(--radius-sm)',
+            background: 'var(--danger-bg)', border: '1px solid var(--danger)',
+            color: 'var(--danger)', fontSize: 12, fontWeight: 600,
+            cursor: isLoading ? 'not-allowed' : 'pointer',
+            fontFamily: 'var(--font-body)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
+          }}
+        >
+          <X size={11} strokeWidth={3} /> Reject
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function FlaggedTable({
   transactions = [],
   loading = false,
@@ -137,6 +212,14 @@ export default function FlaggedTable({
 }) {
   const [confirm, setConfirm] = useState(null);
   const [loadingId, setLoadingId] = useState(null);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth <= 768);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
 
   const handleAction = (txnId, decision) => {
     setConfirm({ txnId, type: decision });
@@ -169,6 +252,32 @@ export default function FlaggedTable({
       </AnimatePresence>
 
       <div style={{ overflowX: 'auto' }}>
+        {isMobile ? (
+          <div>
+            {loading ? (
+              Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} style={{ padding: '14px 16px', borderBottom: '1px solid var(--border-light)' }}>
+                  <div style={{ height: 12, width: '50%', borderRadius: 4, background: 'var(--border-light)', animation: 'shimmer 1.4s ease-in-out infinite', marginBottom: 8 }} />
+                  <div style={{ height: 10, width: '70%', borderRadius: 4, background: 'var(--border-light)', animation: 'shimmer 1.4s ease-in-out infinite' }} />
+                </div>
+              ))
+            ) : transactions.length === 0 ? (
+              <div style={{ padding: '48px 0', textAlign: 'center' }}>
+                <Inbox size={28} color="var(--text-muted)" style={{ margin: '0 auto 10px' }} />
+                <p style={{ color: 'var(--text-muted)', fontSize: 13, fontFamily: 'var(--font-body)' }}>No flagged transactions</p>
+              </div>
+            ) : (
+              transactions.map((txn) => (
+                <MobileFlaggedCard
+                  key={txn.id}
+                  txn={txn}
+                  onReview={onReview}
+                  isLoading={loadingId === txn.id}
+                />
+              ))
+            )}
+          </div>
+        ) : (
         <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: 'var(--font-body)' }}>
           <thead>
             <tr style={{ borderBottom: '1px solid var(--border-light)' }}>
@@ -286,6 +395,7 @@ export default function FlaggedTable({
             )}
           </tbody>
         </table>
+        )}
       </div>
 
       {/* Pagination */}

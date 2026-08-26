@@ -4,8 +4,7 @@ import { Shield } from 'lucide-react';
 
 const QUICK_LINKS = [
   { label: 'Features', href: '#features' },
-  { label: 'Architecture', href: '#architecture' },
-  { label: 'Tech Stack', href: '#tech-stack' },
+  { label: 'How It Works', href: '#how-it-works' },
   { label: 'Log In', to: '/login' },
   { label: 'Get Started', to: '/register' },
 ];
@@ -64,13 +63,13 @@ export default function Footer() {
         borderTop: '1px solid var(--border-light)',
       }}
     >
-      <div
-        style={{
-          maxWidth: 1200,
-          margin: '0 auto',
-          padding: '48px 24px',
-        }}
-      >
+        <div
+          style={{
+            maxWidth: 1200,
+            margin: '0 auto',
+            padding: isMobile ? '32px 20px' : '48px 24px',
+          }}
+        >
         {/* Three-column grid */}
         <div
           style={{
@@ -140,34 +139,6 @@ export default function Footer() {
                 <FooterLink key={link.label} link={link} />
               ))}
             </nav>
-          </div>
-
-          {/* Right: Built with */}
-          <div style={{ flex: isMobile ? 'unset' : '0 0 25%' }}>
-            <div
-              style={{
-                fontFamily: 'var(--font-body)',
-                fontWeight: 600,
-                fontSize: 13,
-                textTransform: 'uppercase',
-                letterSpacing: '0.08em',
-                color: 'var(--text-muted)',
-                marginBottom: 14,
-              }}
-            >
-              Built with
-            </div>
-            <p
-              style={{
-                fontFamily: 'var(--font-body)',
-                fontSize: 13,
-                color: 'var(--text-muted)',
-                lineHeight: 1.6,
-                margin: 0,
-              }}
-            >
-              Java &middot; Spring Boot &middot; React
-            </p>
           </div>
         </div>
 

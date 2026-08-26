@@ -131,6 +131,9 @@ export default function MetricsGrid({ metrics }) {
         @media (max-width: 768px) {
           .metrics-grid { grid-template-columns: repeat(2, 1fr) !important; }
         }
+        @media (max-width: 480px) {
+          .metrics-grid { grid-template-columns: 1fr !important; }
+        }
       `}</style>
     </div>
   );

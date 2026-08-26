@@ -541,7 +541,7 @@ export default function DashboardPage() {
         {/* Top bar */}
         <header style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '16px 28px',
+          padding: '12px 20px',
           borderBottom: '1px solid var(--border-light)',
           background: 'var(--bg-primary)',
           position: 'sticky', top: 0, zIndex: 50,
@@ -557,10 +557,10 @@ export default function DashboardPage() {
               <Menu size={20} />
             </button>
             <div>
-              <p style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)', fontFamily: 'var(--font-display)', marginBottom: 2 }}>
+              <p style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', fontFamily: 'var(--font-display)', marginBottom: 2 }}>
                 {greeting()}, {user?.firstName}
               </p>
-              <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>{fmtDate()}</p>
+              <p style={{ fontSize: 11, color: 'var(--text-muted)' }}>{fmtDate()}</p>
             </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -604,7 +604,7 @@ export default function DashboardPage() {
         </header>
 
         {/* Page body */}
-        <main style={{ flex: 1, padding: '28px', display: 'flex', flexDirection: 'column', gap: 24 }}>
+        <main style={{ flex: 1, padding: '20px', display: 'flex', flexDirection: 'column', gap: 24 }}>
           {/* Error banner */}
           <AnimatePresence>
             {error && (
@@ -862,7 +862,7 @@ export default function DashboardPage() {
               {/* Date range + fetch */}
               <div style={{ padding: '16px 24px', borderBottom: '1px solid var(--border-light)', display: 'flex', gap: 12, alignItems: 'flex-end', flexWrap: 'wrap' }}>
                 {[['From', stmtStart, setStmtStart], ['To', stmtEnd, setStmtEnd]].map(([label, val, setter]) => (
-                  <div key={label} style={{ flex: 1, minWidth: 160 }}>
+                  <div key={label} style={{ flex: 1, minWidth: 140 }}>
                     <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6, fontFamily: 'var(--font-body)' }}>{label}</label>
                     <input
                       type="datetime-local" value={val} onChange={(e) => setter(e.target.value)}
@@ -928,6 +928,9 @@ export default function DashboardPage() {
           .sidebar { position: fixed !important; left: 0; top: 0; transform: translateX(-100%); }
           .sidebar-toggle { display: flex !important; }
           .quick-actions { flex-direction: column !important; }
+          .mobile-hide { display: none !important; }
+          .mobile-stack { flex-direction: column !important; }
+          .mobile-full { width: 100% !important; }
         }
       `}</style>
     </div>
