@@ -1,0 +1,25 @@
+package com.securetransact.repository;
+
+import com.securetransact.model.CaseStatus;
+import com.securetransact.model.RiskCase;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import java.util.List;
+
+public interface RiskCaseRepository extends JpaRepository<RiskCase, Long> {
+
+    Page<RiskCase> findByStatus(CaseStatus status, Pageable pageable);
+
+    Page<RiskCase> findByAssignedToId(Long userId, Pageable pageable);
+
+    @Query("SELECT rc FROM RiskCase rc WHERE rc.status IN :statuses ORDER BY rc.createdAt DESC")
+    Page<RiskCase> findByStatusIn(@Param("statuses") List<CaseStatus> statuses, Pageable pageable);
+
+    long countByStatus(CaseStatus status);
+
+    @Query("SELECT COUNT(rc) FROM RiskCase rc WHERE rc.createdAt > :since")
+    long countCreatedSince(@Param("since") java.time.LocalDateTime since);
+}

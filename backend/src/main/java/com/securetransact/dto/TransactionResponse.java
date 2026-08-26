@@ -15,11 +15,14 @@ public class TransactionResponse {
     private BigDecimal amount;
     private TransactionStatus status;
     private Integer riskScore;
+    private String riskLevel;
+    private String riskDecision;
     private String description;
     private Long fromAccountId;
     private Long toAccountId;
     private String fromAccountNumber;
     private String toAccountNumber;
+    private String idempotencyKey;
     private LocalDateTime createdAt;
 
     public static TransactionResponse from(Transaction txn) {
@@ -30,6 +33,7 @@ public class TransactionResponse {
         response.setStatus(txn.getStatus());
         response.setRiskScore(txn.getRiskScore());
         response.setDescription(txn.getDescription());
+        response.setIdempotencyKey(txn.getIdempotencyKey());
         response.setCreatedAt(txn.getCreatedAt());
 
         if (txn.getFromAccount() != null) {
