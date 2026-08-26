@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard, AlertTriangle, Users, Settings,
   Shield, LogOut, Bell, Menu, RefreshCw, AlertCircle,
+  FileText, Activity,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { admin as adminApi } from '../services/api';
@@ -11,6 +12,8 @@ import ThemeToggle from '../components/common/ThemeToggle';
 import MetricsGrid from '../components/admin/MetricsGrid';
 import FlaggedTable from '../components/admin/FlaggedTable';
 import AllAccountsTable from '../components/admin/AllAccountsTable';
+import RiskCasesTable from '../components/admin/RiskCasesTable';
+import AuditLogViewer from '../components/admin/AuditLogViewer';
 
 /* ── helpers ─────────────────────────────────────── */
 function greeting() {
@@ -28,6 +31,8 @@ function fmtDate() {
 const NAV = [
   { key: 'dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { key: 'flagged',   icon: AlertTriangle,   label: 'Flagged' },
+  { key: 'riskcases', icon: FileText,        label: 'Risk Cases' },
+  { key: 'audit',     icon: Activity,        label: 'Audit Log' },
   { key: 'accounts',  icon: Users,           label: 'All Accounts' },
   { key: 'settings',  icon: Settings,        label: 'Settings' },
 ];
@@ -167,6 +172,11 @@ export default function AdminDashboardPage() {
   const [allAccts, setAllAccts]       = useState([]);
   const [acctsPage, setAcctsPage]     = useState(0);
   const [acctsTotal, setAcctsTotal]   = useState(1);
+
+  const [riskPage, setRiskPage]     = useState(0);
+  const [riskTotal, setRiskTotal]   = useState(1);
+  const [auditPage, setAuditPage]   = useState(0);
+  const [auditTotal, setAuditTotal] = useState(1);
 
   const [loading, setLoading]         = useState(true);
   const [error, setError]             = useState('');
@@ -465,6 +475,62 @@ export default function AdminDashboardPage() {
                       page={acctsPage}
                       totalPages={acctsTotal}
                       onPageChange={loadAccounts}
+                    />
+                  </div>
+                </section>
+              </motion.div>
+            </AnimatePresence>
+          )}
+
+          {/* Risk Cases tab */}
+          {activeTab === 'riskcases' && (
+            <AnimatePresence mode="wait">
+              <motion.div key="riskcases" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                <section>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+                    <h2 style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)', fontFamily: 'var(--font-display)' }}>
+                      Risk Cases
+                    </h2>
+                    <FileText size={14} color="var(--text-muted)" />
+                  </div>
+                  <div style={{
+                    background: 'var(--bg-secondary)',
+                    border: '1px solid var(--border-light)',
+                    borderRadius: 'var(--radius-xl)',
+                    overflow: 'hidden',
+                  }}>
+                    <RiskCasesTable
+                      page={riskPage}
+                      totalPages={riskTotal}
+                      onPageChange={setRiskPage}
+                    />
+                  </div>
+                </section>
+              </motion.div>
+            </AnimatePresence>
+          )}
+
+          {/* Audit Log tab */}
+          {activeTab === 'audit' && (
+            <AnimatePresence mode="wait">
+              <motion.div key="audit" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                <section>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+                    <h2 style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)', fontFamily: 'var(--font-display)' }}>
+                      Audit Log
+                    </h2>
+                    <Activity size={14} color="var(--text-muted)" />
+                  </div>
+                  <div style={{
+                    background: 'var(--bg-secondary)',
+                    border: '1px solid var(--border-light)',
+                    borderRadius: 'var(--radius-xl)',
+                    overflow: 'hidden',
+                  }}>
+                    <AuditLogViewer
+                      page={auditPage}
+                      totalPages={auditTotal}
+                      onPageChange={setAuditPage}
                     />
                   </div>
                 </section>

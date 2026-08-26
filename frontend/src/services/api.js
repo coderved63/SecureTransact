@@ -159,3 +159,41 @@ export const admin = {
     return apiCall(`/api/admin/accounts?${params}`);
   },
 };
+
+// ─── Risk Cases ─────────────────────────────────
+export const riskCases = {
+  list: (page = 0, size = 20) => {
+    const params = new URLSearchParams({ page, size });
+    return apiCall(`/api/v1/admin/risk-cases?${params}`);
+  },
+
+  getById: (id) =>
+    apiCall(`/api/v1/admin/risk-cases/${id}`),
+
+  assign: (id) =>
+    apiCall(`/api/v1/admin/risk-cases/${id}/assign`, { method: 'PATCH' }),
+
+  decide: (id, { decision, reviewNotes }) =>
+    apiCall(`/api/v1/admin/risk-cases/${id}/decision`, {
+      method: 'PATCH',
+      body: JSON.stringify({ decision, reviewNotes }),
+    }),
+};
+
+// ─── Audit Events ───────────────────────────────
+export const auditEvents = {
+  list: (page = 0, size = 50) => {
+    const params = new URLSearchParams({ page, size });
+    return apiCall(`/api/v1/audit-events?${params}`);
+  },
+
+  listByAction: (action, page = 0, size = 50) => {
+    const params = new URLSearchParams({ page, size });
+    return apiCall(`/api/v1/audit-events/by-action/${action}?${params}`);
+  },
+
+  listForResource: (resourceType, resourceId, page = 0, size = 50) => {
+    const params = new URLSearchParams({ page, size });
+    return apiCall(`/api/v1/audit-events/by-resource/${resourceType}/${resourceId}?${params}`);
+  },
+};
