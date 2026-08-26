@@ -25,9 +25,9 @@ const ACTIVE_ROW = 1;
 const ACTIVE_COL = 2;
 
 const TRUST_CHIPS = [
-  { label: 'Spring Boot 3', color: '#34d399' },
-  { label: 'Real-time Scoring', color: '#f97316' },
-  { label: 'JWT Secured', color: '#60a5fa' },
+  { label: 'Real-time Risk Scoring', color: '#f97316' },
+  { label: 'Role-based Access', color: '#60a5fa' },
+  { label: 'Full Audit Trail', color: '#34d399' },
 ];
 
 const containerVariants = {
@@ -184,7 +184,7 @@ export default function Hero() {
             }}
           >
             A full-stack banking platform with real-time fraud scoring,
-            ACID-compliant processing, and role-based admin controls.
+            secure transaction processing, and role-based admin controls.
           </motion.p>
 
           {/* Buttons */}
@@ -223,7 +223,7 @@ export default function Hero() {
 
             <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.98 }}>
               <Link
-                to="#architecture"
+                to="#how-it-works"
                 style={{
                   display: 'inline-block',
                   padding: '14px 32px',
@@ -247,7 +247,7 @@ export default function Hero() {
                   e.currentTarget.style.color = 'var(--text-secondary)';
                 }}
               >
-                View Architecture
+                See How It Works
               </Link>
             </motion.div>
           </motion.div>

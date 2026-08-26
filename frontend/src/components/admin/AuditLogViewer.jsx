@@ -2,6 +2,16 @@ import { useState, useEffect, useCallback } from 'react';
 import { auditEvents } from '../../services/api';
 import { Activity, Filter, ChevronDown, ChevronUp } from 'lucide-react';
 
+function useIsMobile() {
+  const [m, setM] = useState(typeof window !== 'undefined' && window.innerWidth <= 768);
+  useEffect(() => {
+    const h = () => setM(window.innerWidth <= 768);
+    window.addEventListener('resize', h);
+    return () => window.removeEventListener('resize', h);
+  }, []);
+  return m;
+}
+
 const ACTION_OPTIONS = [
   { value: '', label: 'All Actions' },
   { value: 'ACCOUNT_CREATED', label: 'Account Created' },
@@ -51,6 +61,7 @@ export default function AuditLogViewer({ page: controlledPage, totalPages: contr
   const [loading, setLoading] = useState(true);
   const [filterAction, setFilterAction] = useState('');
   const [expandedId, setExpandedId] = useState(null);
+  const isMobile = useIsMobile();
 
   const loadEvents = useCallback(async (page = 0) => {
     setLoading(true);
@@ -132,27 +143,48 @@ export default function AuditLogViewer({ page: controlledPage, totalPages: contr
           return (
             <div key={ev.id} style={{ borderBottom: '1px solid var(--border-light)' }}>
               <div
-                style={{ padding: '12px 16px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12, transition: 'background 0.1s' }}
+                style={{ padding: isMobile ? '12px 16px' : '12px 16px', cursor: 'pointer', display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'stretch' : 'center', gap: isMobile ? 6 : 12, transition: 'background 0.1s' }}
                 onClick={() => setExpandedId(isExpanded ? null : ev.id)}
                 onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-tertiary)'}
                 onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
               >
-                <span style={{ fontSize: 11, color: 'var(--text-muted)', minWidth: 100, fontFamily: 'var(--font-mono, monospace)' }}>
-                  {fmtDate(ev.createdAt)}
-                </span>
-                <span style={{ padding: '3px 8px', borderRadius: 'var(--radius-full)', fontSize: 10, fontWeight: 700, background: style.bg, color: style.color, minWidth: 110, textAlign: 'center', whiteSpace: 'nowrap' }}>
-                  {ev.action?.replace(/_/g, ' ')}
-                </span>
-                <span style={{ flex: 1, fontSize: 12, color: 'var(--text-secondary)', fontFamily: 'var(--font-body)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {ev.description || ev.resourceType ? `${ev.resourceType || ''} ${ev.resourceId ? `#${ev.resourceId}` : ''}`.trim() : '—'}
-                </span>
-                <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'var(--font-body)' }}>
-                  {ev.performedBy || 'system'}
-                </span>
-                {isExpanded ? <ChevronUp size={14} color="var(--text-muted)" /> : <ChevronDown size={14} color="var(--text-muted)" />}
+                {isMobile ? (
+                  <>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                      <span style={{ padding: '3px 8px', borderRadius: 'var(--radius-full)', fontSize: 10, fontWeight: 700, background: style.bg, color: style.color, whiteSpace: 'nowrap' }}>
+                        {ev.action?.replace(/_/g, ' ')}
+                      </span>
+                      <span style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: 'var(--font-mono, monospace)' }}>
+                        {fmtDate(ev.createdAt)}
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                      <span style={{ fontSize: 12, color: 'var(--text-secondary)', fontFamily: 'var(--font-body)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+                        {ev.description || ev.resourceType ? `${ev.resourceType || ''} ${ev.resourceId ? `#${ev.resourceId}` : ''}`.trim() : '—'}
+                      </span>
+                      {isExpanded ? <ChevronUp size={14} color="var(--text-muted)" /> : <ChevronDown size={14} color="var(--text-muted)" />}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <span style={{ fontSize: 11, color: 'var(--text-muted)', minWidth: 100, fontFamily: 'var(--font-mono, monospace)' }}>
+                      {fmtDate(ev.createdAt)}
+                    </span>
+                    <span style={{ padding: '3px 8px', borderRadius: 'var(--radius-full)', fontSize: 10, fontWeight: 700, background: style.bg, color: style.color, minWidth: 110, textAlign: 'center', whiteSpace: 'nowrap' }}>
+                      {ev.action?.replace(/_/g, ' ')}
+                    </span>
+                    <span style={{ flex: 1, fontSize: 12, color: 'var(--text-secondary)', fontFamily: 'var(--font-body)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {ev.description || ev.resourceType ? `${ev.resourceType || ''} ${ev.resourceId ? `#${ev.resourceId}` : ''}`.trim() : '—'}
+                    </span>
+                    <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'var(--font-body)' }}>
+                      {ev.performedBy || 'system'}
+                    </span>
+                    {isExpanded ? <ChevronUp size={14} color="var(--text-muted)" /> : <ChevronDown size={14} color="var(--text-muted)" />}
+                  </>
+                )}
               </div>
               {isExpanded && (
-                <div style={{ padding: '0 16px 14px 128px' }}>
+                <div style={{ padding: isMobile ? '0 16px 14px' : '0 16px 14px 128px' }}>
                   {ev.description && (
                     <p style={{ fontSize: 12, color: 'var(--text-secondary)', margin: '0 0 8px', fontFamily: 'var(--font-body)' }}>
                       {ev.description}

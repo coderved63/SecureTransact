@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowDownLeft, ArrowUpRight, ArrowLeftRight, ChevronLeft, ChevronRight, Inbox } from 'lucide-react';
 import StatusBadge from './StatusBadge';
@@ -65,6 +66,61 @@ function EmptyState() {
   );
 }
 
+function MobileTxnCard({ txn, userAccountIds }) {
+  const cfg = typeConfig[txn.type] || typeConfig.TRANSFER;
+  const Icon = cfg.icon;
+  const isIncomingTransfer = txn.type === 'TRANSFER' && userAccountIds.includes(txn.toAccountId) && !userAccountIds.includes(txn.fromAccountId);
+  const isPos = txn.type === 'DEPOSIT' || isIncomingTransfer;
+
+  return (
+    <div style={{
+      padding: '14px 16px',
+      borderBottom: '1px solid var(--border-light)',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 8,
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span style={{
+            width: 32, height: 32, borderRadius: 8,
+            background: `${cfg.color}18`,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+          }}>
+            <Icon size={14} color={cfg.color} strokeWidth={2.5} />
+          </span>
+          <div>
+            <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', fontFamily: 'var(--font-body)', margin: 0 }}>
+              {cfg.label}
+            </p>
+            <p style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'var(--font-body)', margin: 0 }}>
+              {txn.createdAt
+                ? new Date(txn.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+                : '—'}
+            </p>
+          </div>
+        </div>
+        <span style={{
+          fontSize: 14, fontWeight: 700,
+          color: isPos ? 'var(--success)' : 'var(--danger)',
+          fontFamily: 'var(--font-mono)',
+        }}>
+          {isPos ? '+' : '-'}{fmt(txn.amount)}
+        </span>
+      </div>
+      {txn.description && (
+        <p style={{ fontSize: 12, color: 'var(--text-secondary)', fontFamily: 'var(--font-body)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {txn.description}
+        </p>
+      )}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <StatusBadge status={txn.status} />
+        <RiskBadge level={txn.riskScore} />
+      </div>
+    </div>
+  );
+}
+
 export default function TransactionTable({
   transactions = [],
   loading = false,
@@ -74,6 +130,14 @@ export default function TransactionTable({
   onPageChange,
   userAccountIds = [],
 }) {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth <= 768);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
   return (
     <div>
       <style>{`
@@ -83,8 +147,37 @@ export default function TransactionTable({
         .txn-row:hover td { background: var(--bg-tertiary) !important; }
       `}</style>
 
-      {/* Desktop table */}
-      <div style={{ overflowX: 'auto' }}>
+      {/* Mobile card view */}
+      {isMobile ? (
+        <div>
+          {loading ? (
+            Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} style={{ padding: '14px 16px', borderBottom: '1px solid var(--border-light)' }}>
+                <div style={{ height: 12, width: '60%', borderRadius: 4, background: 'var(--border-light)', animation: 'shimmer 1.4s ease-in-out infinite', marginBottom: 8 }} />
+                <div style={{ height: 10, width: '40%', borderRadius: 4, background: 'var(--border-light)', animation: 'shimmer 1.4s ease-in-out infinite' }} />
+              </div>
+            ))
+          ) : transactions.length === 0 ? (
+            <div style={{ padding: '48px 0', textAlign: 'center' }}>
+              <Inbox size={32} color="var(--text-muted)" style={{ margin: '0 auto 12px' }} />
+              <p style={{ color: 'var(--text-muted)', fontSize: 14, fontFamily: 'var(--font-body)' }}>No transactions yet</p>
+            </div>
+          ) : (
+            transactions.map((txn, i) => (
+              <motion.div
+                key={txn.id}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.25, delay: i * 0.04 }}
+              >
+                <MobileTxnCard txn={txn} userAccountIds={userAccountIds} />
+              </motion.div>
+            ))
+          )}
+        </div>
+      ) : (
+        /* Desktop table */
+        <div style={{ overflowX: 'auto' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: 'var(--font-body)' }}>
           <thead>
             <tr style={{ borderBottom: '1px solid var(--border-light)' }}>
@@ -168,6 +261,7 @@ export default function TransactionTable({
           </tbody>
         </table>
       </div>
+      )}
 
       {/* Pagination */}
       {showPagination && totalPages > 1 && (

@@ -19,6 +19,7 @@ function WaveDecor() {
 export default function BalanceOverview({ accounts = [] }) {
   const total = accounts.reduce((sum, a) => sum + (a.balance ?? 0), 0);
   const active = accounts.filter((a) => a.status === 'ACTIVE').length;
+  const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
 
   return (
     <motion.div
@@ -28,13 +29,14 @@ export default function BalanceOverview({ accounts = [] }) {
       style={{
         borderRadius: 'var(--radius-xl)',
         background: 'linear-gradient(135deg, var(--accent) 0%, var(--accent-hover) 100%)',
-        padding: '28px 32px',
+        padding: isMobile ? '24px 20px' : '28px 32px',
         display: 'flex',
-        alignItems: 'center',
+        alignItems: isMobile ? 'stretch' : 'center',
         justifyContent: 'space-between',
         position: 'relative',
         overflow: 'hidden',
         boxShadow: 'var(--shadow-accent)',
+        gap: 16,
       }}
     >
       <div style={{ position: 'absolute', top: -40, right: 60, width: 200, height: 200, borderRadius: '50%', background: 'rgba(255,255,255,0.08)', pointerEvents: 'none' }} />
@@ -69,7 +71,7 @@ export default function BalanceOverview({ accounts = [] }) {
       </div>
 
       <div style={{ position: 'relative', zIndex: 1, flexShrink: 0 }}>
-        <WaveDecor />
+        {!isMobile && <WaveDecor />}
       </div>
     </motion.div>
   );

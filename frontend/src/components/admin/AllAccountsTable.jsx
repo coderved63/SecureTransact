@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { ChevronLeft, ChevronRight, Inbox, Search } from 'lucide-react';
 import StatusBadge from '../dashboard/StatusBadge';
@@ -23,6 +23,52 @@ function SkeletonRow() {
   );
 }
 
+function MobileAccountCard({ acct }) {
+  return (
+    <div style={{
+      padding: '14px 16px',
+      borderBottom: '1px solid var(--border-light)',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 8,
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div>
+          <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', fontFamily: 'var(--font-mono)', margin: 0, letterSpacing: '0.04em' }}>
+            {acct.accountNumber}
+          </p>
+          <p style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'var(--font-body)', margin: 0 }}>
+            {acct.createdAt
+              ? new Date(acct.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+              : '—'}
+          </p>
+        </div>
+        <span style={{
+          fontSize: 14, fontWeight: 700,
+          fontFamily: 'var(--font-mono)', color: 'var(--text-primary)',
+        }}>
+          {fmt(acct.balance)}
+        </span>
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <span style={{
+          display: 'inline-block', padding: '2px 8px',
+          borderRadius: 'var(--radius-full)',
+          fontSize: 10, fontWeight: 700,
+          letterSpacing: '0.04em',
+          textTransform: 'uppercase',
+          color: 'var(--accent)',
+          background: 'var(--accent-subtle)',
+          fontFamily: 'var(--font-body)',
+        }}>
+          {acct.accountType}
+        </span>
+        <StatusBadge status={acct.status} />
+      </div>
+    </div>
+  );
+}
+
 export default function AllAccountsTable({
   accounts = [],
   loading = false,
@@ -31,6 +77,14 @@ export default function AllAccountsTable({
   onPageChange,
 }) {
   const [search, setSearch] = useState('');
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth <= 768);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
 
   const filtered = search
     ? accounts.filter((a) =>
@@ -79,6 +133,36 @@ export default function AllAccountsTable({
       </div>
 
       <div style={{ overflowX: 'auto' }}>
+        {isMobile ? (
+          <div>
+            {loading ? (
+              Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} style={{ padding: '14px 16px', borderBottom: '1px solid var(--border-light)' }}>
+                  <div style={{ height: 12, width: '50%', borderRadius: 4, background: 'var(--border-light)', animation: 'shimmer 1.4s ease-in-out infinite', marginBottom: 8 }} />
+                  <div style={{ height: 10, width: '30%', borderRadius: 4, background: 'var(--border-light)', animation: 'shimmer 1.4s ease-in-out infinite' }} />
+                </div>
+              ))
+            ) : filtered.length === 0 ? (
+              <div style={{ padding: '48px 0', textAlign: 'center' }}>
+                <Inbox size={28} color="var(--text-muted)" style={{ margin: '0 auto 10px' }} />
+                <p style={{ color: 'var(--text-muted)', fontSize: 13, fontFamily: 'var(--font-body)' }}>
+                  {search ? 'No matching accounts' : 'No accounts found'}
+                </p>
+              </div>
+            ) : (
+              filtered.map((acct, i) => (
+                <motion.div
+                  key={acct.id}
+                  initial={{ opacity: 0, x: -8 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.2, delay: i * 0.03 }}
+                >
+                  <MobileAccountCard acct={acct} />
+                </motion.div>
+              ))
+            )}
+          </div>
+        ) : (
         <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: 'var(--font-body)' }}>
           <thead>
             <tr style={{ borderBottom: '1px solid var(--border-light)' }}>
@@ -151,6 +235,7 @@ export default function AllAccountsTable({
             )}
           </tbody>
         </table>
+        )}
       </div>
 
       {/* Pagination */}

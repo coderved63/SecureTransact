@@ -7,8 +7,7 @@ import ThemeToggle from '../common/ThemeToggle';
 /* ── Nav link definitions ── */
 const NAV_LINKS = [
   { label: 'Features', href: '#features' },
-  { label: 'Architecture', href: '#architecture' },
-  { label: 'Tech Stack', href: '#tech-stack' },
+  { label: 'How It Works', href: '#how-it-works' },
 ];
 
 /* ── Smooth-scroll handler ── */

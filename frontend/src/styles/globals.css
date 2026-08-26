@@ -468,3 +468,64 @@
     scroll-behavior: auto;
   }
 }
+
+/* ═══════════════════════════════════
+   RESPONSIVE UTILITIES
+   ═══════════════════════════════════ */
+@media (max-width: 768px) {
+  .hide-mobile { display: none !important; }
+  .show-mobile { display: block !important; }
+  .flex-show-mobile { display: flex !important; }
+
+  .mobile-stack {
+    flex-direction: column !important;
+  }
+
+  .mobile-full {
+    width: 100% !important;
+    flex: 1 1 100% !important;
+  }
+
+  .mobile-p-0 { padding: 0 !important; }
+  .mobile-px-16 { padding-left: 16px !important; padding-right: 16px !important; }
+  .mobile-py-24 { padding-top: 24px !important; padding-bottom: 24px !important; }
+
+  .mobile-text-sm { font-size: 12px !important; }
+  .mobile-text-xs { font-size: 11px !important; }
+
+  .mobile-grid-1 { grid-template-columns: 1fr !important; }
+  .mobile-grid-2 { grid-template-columns: repeat(2, 1fr) !important; }
+
+  /* Mobile card layout for tables */
+  .mobile-table-card thead { display: none !important; }
+  .mobile-table-card tbody tr {
+    display: flex !important;
+    flex-direction: column;
+    padding: 14px 16px !important;
+    gap: 8px;
+    border-bottom: 1px solid var(--border-light) !important;
+  }
+  .mobile-table-card tbody td {
+    padding: 0 !important;
+    border: none !important;
+  }
+
+  /* Mobile quick actions */
+  .mobile-quick-actions {
+    flex-direction: column !important;
+  }
+
+  /* Mobile account cards scroll */
+  .mobile-scroll-x {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 8px;
+  }
+  .mobile-scroll-x::-webkit-scrollbar { display: none; }
+}
+
+@media (max-width: 480px) {
+  .mobile-compact { padding: 12px !important; }
+  .mobile-gap-8 { gap: 8px !important; }
+}

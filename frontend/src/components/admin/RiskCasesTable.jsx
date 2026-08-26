@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { riskCases } from '../../services/api';
-import { AlertTriangle, UserCheck, CheckCircle, XCircle, Clock, Eye } from 'lucide-react';
+import { AlertTriangle, UserCheck, CheckCircle, XCircle, Clock, Eye, Inbox } from 'lucide-react';
 
 const STATUS_COLORS = {
   OPEN: { bg: 'var(--warning-bg)', color: 'var(--warning)' },
@@ -15,6 +15,44 @@ const DECISION_OPTIONS = [
   { value: 'APPROVE', label: 'Approve Transaction', color: 'var(--success)', icon: CheckCircle },
 ];
 
+function MobileRiskCaseCard({ c, onClick }) {
+  const style = STATUS_COLORS[c.status] || STATUS_COLORS.OPEN;
+  return (
+    <div
+      onClick={() => onClick(c)}
+      style={{
+        padding: '14px 16px',
+        borderBottom: '1px solid var(--border-light)',
+        cursor: 'pointer',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 10,
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: 13 }}>#{c.id}</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <div style={{ width: 40, height: 5, borderRadius: 3, background: 'var(--bg-tertiary)', overflow: 'hidden' }}>
+              <div style={{ height: '100%', width: `${Math.min(c.fraudScore ?? 0, 100)}%`, borderRadius: 3, background: (c.fraudScore ?? 0) > 70 ? 'var(--danger)' : (c.fraudScore ?? 0) > 40 ? 'var(--warning)' : 'var(--success)' }} />
+            </div>
+            <span style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: 12 }}>{c.fraudScore ?? '—'}</span>
+          </div>
+        </div>
+        <span style={{ padding: '3px 10px', borderRadius: 'var(--radius-full)', fontSize: 11, fontWeight: 700, background: style.bg, color: style.color }}>
+          {c.status?.replace(/_/g, ' ')}
+        </span>
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <span style={{ color: 'var(--text-secondary)', fontSize: 12 }}>{c.assignedTo || 'Unassigned'}</span>
+        <span style={{ color: 'var(--text-muted)', fontSize: 11 }}>
+          {c.createdAt ? new Date(c.createdAt).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'}
+        </span>
+      </div>
+    </div>
+  );
+}
+
 export default function RiskCasesTable({ page: controlledPage, totalPages, onPageChange }) {
   const [cases, setCases] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -22,6 +60,14 @@ export default function RiskCasesTable({ page: controlledPage, totalPages, onPag
   const [deciding, setDeciding] = useState(null);
   const [notes, setNotes] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth <= 768);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
 
   const loadCases = useCallback(async (page = 0) => {
     setLoading(true);
@@ -165,6 +211,27 @@ export default function RiskCasesTable({ page: controlledPage, totalPages, onPag
       )}
 
       {/* Table */}
+      {isMobile ? (
+        <div>
+          {loading ? (
+            Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} style={{ padding: '14px 16px', borderBottom: '1px solid var(--border-light)' }}>
+                <div style={{ height: 12, width: '40%', borderRadius: 4, background: 'var(--bg-tertiary)', animation: 'shimmer 1.4s ease-in-out infinite', marginBottom: 8 }} />
+                <div style={{ height: 10, width: '60%', borderRadius: 4, background: 'var(--bg-tertiary)', animation: 'shimmer 1.4s ease-in-out infinite' }} />
+              </div>
+            ))
+          ) : cases.length === 0 ? (
+            <div style={{ padding: '40px 16px', textAlign: 'center', color: 'var(--text-muted)' }}>
+              <AlertTriangle size={24} style={{ margin: '0 auto 10px', opacity: 0.4 }} />
+              <p style={{ margin: 0 }}>No risk cases found</p>
+            </div>
+          ) : (
+            cases.map((c) => (
+              <MobileRiskCaseCard key={c.id} c={c} onClick={setSelectedCase} />
+            ))
+          )}
+        </div>
+      ) : (
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, fontFamily: 'var(--font-body)' }}>
         <thead>
           <tr style={{ borderBottom: '1px solid var(--border-light)' }}>
@@ -223,6 +290,7 @@ export default function RiskCasesTable({ page: controlledPage, totalPages, onPag
           })}
         </tbody>
       </table>
+      )}
 
       {/* Pagination */}
       {totalPages > 1 && (

@@ -271,7 +271,7 @@ export default function AdminDashboardPage() {
         {/* Top bar */}
         <header style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '16px 28px',
+          padding: '12px 20px',
           borderBottom: '1px solid var(--border-light)',
           background: 'var(--bg-primary)',
           position: 'sticky', top: 0, zIndex: 50,
@@ -285,10 +285,10 @@ export default function AdminDashboardPage() {
               <Menu size={20} />
             </button>
             <div>
-              <p style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)', fontFamily: 'var(--font-display)', marginBottom: 2 }}>
+              <p style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', fontFamily: 'var(--font-display)', marginBottom: 2 }}>
                 {greeting()}, {user?.firstName}
               </p>
-              <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>{fmtDate()}</p>
+              <p style={{ fontSize: 11, color: 'var(--text-muted)' }}>{fmtDate()}</p>
             </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -329,7 +329,7 @@ export default function AdminDashboardPage() {
         </header>
 
         {/* Page body */}
-        <main style={{ flex: 1, padding: '28px', display: 'flex', flexDirection: 'column', gap: 24 }}>
+        <main style={{ flex: 1, padding: '20px', display: 'flex', flexDirection: 'column', gap: 24 }}>
           {/* Error banner */}
           <AnimatePresence>
             {error && (
