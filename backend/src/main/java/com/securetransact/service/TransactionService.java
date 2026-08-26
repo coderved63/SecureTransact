@@ -1,28 +1,26 @@
 package com.securetransact.service;
 
+import com.securetransact.audit.Auditable;
 import com.securetransact.dto.TransactionRequest;
 import com.securetransact.dto.TransactionResponse;
 import com.securetransact.exception.ConflictException;
-import com.securetransact.exception.ForbiddenException;
-import com.securetransact.exception.InsufficientBalanceException;
-import com.securetransact.exception.ResourceNotFoundException;
-import com.securetransact.fraud.FraudDetectionService;
-import com.securetransact.fraud.FraudResult;
 import com.securetransact.model.*;
-import com.securetransact.repository.AccountRepository;
 import com.securetransact.repository.FraudLogRepository;
+import com.securetransact.repository.RiskEvaluationRepository;
 import com.securetransact.repository.TransactionRepository;
+import com.securetransact.risk.RiskDecisionEngine;
+import com.securetransact.risk.RiskEngineResult;
+import com.securetransact.risk.RiskEngineService;
+import com.securetransact.risk.RiskScoringResult;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
 import java.util.Optional;
 
 @Slf4j
@@ -31,15 +29,18 @@ import java.util.Optional;
 public class TransactionService {
 
     private final TransactionRepository transactionRepository;
-    private final AccountRepository accountRepository;
-    private final FraudDetectionService fraudDetectionService;
+    private final TransactionValidator validator;
+    private final TransactionProcessor processor;
+    private final RiskEngineService riskEngineService;
+    private final RiskCaseService riskCaseService;
+    private final AuditService auditService;
+    private final RiskEvaluationRepository riskEvaluationRepository;
     private final FraudLogRepository fraudLogRepository;
 
-    private static final int MAX_RETRIES = 3;
-
     @Transactional(isolation = Isolation.READ_COMMITTED)
+    @Auditable(action = AuditAction.TRANSACTION_CREATED, resourceType = "TRANSACTION",
+            description = "Transaction submitted for processing")
     public TransactionResponse submitTransaction(Long userId, TransactionRequest request) {
-        // Idempotency check
         if (request.getIdempotencyKey() != null) {
             Optional<Transaction> existing = transactionRepository.findByIdempotencyKey(request.getIdempotencyKey());
             if (existing.isPresent()) {
@@ -47,36 +48,29 @@ public class TransactionService {
             }
         }
 
-        // Validate and get accounts
         Account fromAccount = null;
         Account toAccount = null;
 
         switch (request.getType()) {
-            case DEPOSIT:
-                toAccount = getAndValidateAccount(request.getToAccountId(), userId);
-                break;
-            case WITHDRAWAL:
-                fromAccount = getAndValidateAccount(request.getFromAccountId(), userId);
-                validateSufficientBalance(fromAccount, request.getAmount());
-                break;
-            case TRANSFER:
-                fromAccount = getAndValidateAccount(request.getFromAccountId(), userId);
-                toAccount = accountRepository.findById(request.getToAccountId())
-                        .orElseThrow(() -> new ResourceNotFoundException("Destination account not found"));
-                if (fromAccount.getId().equals(toAccount.getId())) {
-                    throw new ConflictException("Source and destination accounts must be different");
-                }
-                validateSufficientBalance(fromAccount, request.getAmount());
-                break;
+            case DEPOSIT -> toAccount = validator.validateAndGetToAccount(request.getToAccountId());
+            case WITHDRAWAL -> {
+                fromAccount = validator.validateAndGetFromAccount(request.getFromAccountId(), userId);
+                validator.validateSufficientBalance(fromAccount, request.getAmount());
+            }
+            case TRANSFER -> {
+                fromAccount = validator.validateAndGetFromAccount(request.getFromAccountId(), userId);
+                toAccount = validator.validateAndGetToAccount(request.getToAccountId());
+                validator.validateDifferentAccounts(fromAccount, toAccount);
+                validator.validateSufficientBalance(fromAccount, request.getAmount());
+            }
         }
 
-        // Create transaction
         Transaction transaction = Transaction.builder()
                 .fromAccount(fromAccount)
                 .toAccount(toAccount)
                 .type(request.getType())
                 .amount(request.getAmount())
-                .status(TransactionStatus.PENDING)
+                .status(TransactionStatus.CREATED)
                 .idempotencyKey(request.getIdempotencyKey())
                 .description(request.getDescription())
                 .build();
@@ -84,93 +78,67 @@ public class TransactionService {
         try {
             transaction = transactionRepository.save(transaction);
         } catch (DataIntegrityViolationException e) {
-            // Race condition: another request already used this idempotency key
             Transaction existing = transactionRepository.findByIdempotencyKey(request.getIdempotencyKey())
                     .orElseThrow(() -> new ConflictException("Duplicate idempotency key"));
             return TransactionResponse.from(existing);
         }
 
-        // Fraud detection
         Account sourceAccount = (fromAccount != null) ? fromAccount : toAccount;
-        FraudResult fraudResult = fraudDetectionService.analyzeTransaction(transaction, sourceAccount);
-        transaction.setRiskScore(fraudResult.getTotalScore());
+        RiskEngineResult engineResult = riskEngineService.evaluateTransaction(transaction, sourceAccount);
 
-        // Log fraud analysis
-        FraudLog fraudLog = FraudLog.builder()
+        RiskScoringResult scoringResult = engineResult.getScoringResult();
+        transaction.setRiskScore(scoringResult.getTotalScore());
+
+        RiskEvaluation evaluation = RiskEvaluation.builder()
                 .transaction(transaction)
-                .totalScore(fraudResult.getTotalScore())
-                .rulesTriggered(String.join(", ", fraudResult.getTriggeredRules()))
-                .decision(fraudResult.getRiskLevel() == RiskLevel.HIGH || fraudResult.getRiskLevel() == RiskLevel.CRITICAL
-                        ? FraudDecision.FLAGGED : FraudDecision.AUTO_APPROVED)
+                .totalScore(scoringResult.getTotalScore())
+                .riskLevel(scoringResult.getRiskLevel())
+                .decision(scoringResult.getDecision())
+                .modelVersion(scoringResult.getModelVersion())
+                .reasons(formatReasons(engineResult))
+                .mlProbability(scoringResult.getMlProbability())
                 .build();
-        fraudLogRepository.save(fraudLog);
+        riskEvaluationRepository.save(evaluation);
 
-        // Process based on risk level
-        if (fraudResult.getRiskLevel() == RiskLevel.HIGH || fraudResult.getRiskLevel() == RiskLevel.CRITICAL) {
-            transaction.setStatus(TransactionStatus.FLAGGED);
-            log.warn("Transaction {} flagged with risk score {}: {}", transaction.getId(),
-                    fraudResult.getTotalScore(), fraudResult.getTriggeredRules());
-        } else {
-            processTransaction(transaction, fromAccount, toAccount);
+        switch (scoringResult.getDecision()) {
+            case ALLOW -> {
+                TransactionStatus settlementStatus = processor.processMoneyMovement(transaction);
+                transaction.setStatus(settlementStatus);
+
+                if (settlementStatus == TransactionStatus.SETTLED) {
+                    auditService.recordEvent(AuditAction.TRANSACTION_SETTLED, "TRANSACTION",
+                            transaction.getId(), "Auto-settled after risk evaluation", null, null, null);
+                } else {
+                    auditService.recordEvent(AuditAction.TRANSACTION_FAILED, "TRANSACTION",
+                            transaction.getId(), "Settlement failed", null, null, null);
+                }
+            }
+            case HOLD_FOR_REVIEW -> {
+                transaction.setStatus(TransactionStatus.HELD_FOR_REVIEW);
+                riskCaseService.createRiskCase(transaction, evaluation);
+                auditService.recordEvent(AuditAction.TRANSACTION_HELD, "TRANSACTION",
+                        transaction.getId(), "Held for review - risk score: " + scoringResult.getTotalScore(),
+                        null, null, null);
+            }
+            case BLOCK -> {
+                transaction.setStatus(TransactionStatus.REJECTED);
+                auditService.recordEvent(AuditAction.TRANSACTION_REJECTED, "TRANSACTION",
+                        transaction.getId(), "Blocked by risk engine - score: " + scoringResult.getTotalScore(),
+                        null, null, null);
+            }
         }
 
         transaction = transactionRepository.save(transaction);
+        log.info("Transaction {} completed: status={}, riskScore={}, decision={}",
+                transaction.getId(), transaction.getStatus(), scoringResult.getTotalScore(),
+                scoringResult.getDecision());
+
         return TransactionResponse.from(transaction);
-    }
-
-    private void processTransaction(Transaction transaction, Account fromAccount, Account toAccount) {
-        int retries = 0;
-        while (retries < MAX_RETRIES) {
-            try {
-                transaction.setStatus(TransactionStatus.PROCESSING);
-
-                // Re-validate balance before moving money
-                if ((transaction.getType() == TransactionType.WITHDRAWAL || transaction.getType() == TransactionType.TRANSFER)
-                        && fromAccount.getBalance().compareTo(transaction.getAmount()) < 0) {
-                    transaction.setStatus(TransactionStatus.FAILED);
-                    log.warn("Transaction {} failed: insufficient balance (available: {}, required: {})",
-                            transaction.getId(), fromAccount.getBalance(), transaction.getAmount());
-                    return;
-                }
-
-                switch (transaction.getType()) {
-                    case DEPOSIT:
-                        toAccount.setBalance(toAccount.getBalance().add(transaction.getAmount()));
-                        accountRepository.save(toAccount);
-                        break;
-                    case WITHDRAWAL:
-                        fromAccount.setBalance(fromAccount.getBalance().subtract(transaction.getAmount()));
-                        accountRepository.save(fromAccount);
-                        break;
-                    case TRANSFER:
-                        fromAccount.setBalance(fromAccount.getBalance().subtract(transaction.getAmount()));
-                        toAccount.setBalance(toAccount.getBalance().add(transaction.getAmount()));
-                        accountRepository.save(fromAccount);
-                        accountRepository.save(toAccount);
-                        break;
-                }
-
-                transaction.setStatus(TransactionStatus.COMPLETED);
-                return;
-            } catch (ObjectOptimisticLockingFailureException e) {
-                retries++;
-                log.warn("Optimistic lock conflict for transaction {}, retry {}/{}",
-                        transaction.getId(), retries, MAX_RETRIES);
-                if (retries >= MAX_RETRIES) {
-                    transaction.setStatus(TransactionStatus.FAILED);
-                    log.error("Transaction {} failed after {} retries due to concurrent modification",
-                            transaction.getId(), MAX_RETRIES);
-                }
-                // Refresh accounts from DB
-                if (fromAccount != null) fromAccount = accountRepository.findById(fromAccount.getId()).orElseThrow();
-                if (toAccount != null) toAccount = accountRepository.findById(toAccount.getId()).orElseThrow();
-            }
-        }
     }
 
     public TransactionResponse getTransaction(Long transactionId, Long userId, boolean isAdmin) {
         Transaction transaction = transactionRepository.findById(transactionId)
-                .orElseThrow(() -> new ResourceNotFoundException("Transaction not found"));
+                .orElseThrow(() -> new com.securetransact.exception.ResourceNotFoundException("Transaction not found"));
 
         boolean isOwner = (transaction.getFromAccount() != null
                         && transaction.getFromAccount().getUser().getId().equals(userId))
@@ -178,7 +146,7 @@ public class TransactionService {
                         && transaction.getToAccount().getUser().getId().equals(userId));
 
         if (!isOwner && !isAdmin) {
-            throw new ForbiddenException("You do not have access to this transaction");
+            throw new com.securetransact.exception.ForbiddenException("You do not have access to this transaction");
         }
 
         return TransactionResponse.from(transaction);
@@ -189,24 +157,13 @@ public class TransactionService {
                 .map(TransactionResponse::from);
     }
 
-    private Account getAndValidateAccount(Long accountId, Long userId) {
-        Account account = accountRepository.findById(accountId)
-                .orElseThrow(() -> new ResourceNotFoundException("Account not found"));
-
-        if (!account.getUser().getId().equals(userId)) {
-            throw new ForbiddenException("You do not have access to this account");
+    private String formatReasons(RiskEngineResult result) {
+        if (result.getScoringResult().getFactors() == null || result.getScoringResult().getFactors().isEmpty()) {
+            return "";
         }
-
-        if (account.getStatus() != AccountStatus.ACTIVE) {
-            throw new ConflictException("Account is not active");
-        }
-
-        return account;
-    }
-
-    private void validateSufficientBalance(Account account, BigDecimal amount) {
-        if (account.getBalance().compareTo(amount) < 0) {
-            throw new InsufficientBalanceException("Insufficient balance");
-        }
+        return result.getScoringResult().getFactors().stream()
+                .map(f -> f.getCode() + ": " + f.getMessage() + " (+" + f.getPoints() + ")")
+                .reduce((a, b) -> a + "||" + b)
+                .orElse("");
     }
 }
