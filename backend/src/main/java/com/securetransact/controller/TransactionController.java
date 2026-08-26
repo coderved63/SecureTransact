@@ -35,8 +35,10 @@ public class TransactionController {
 
     @GetMapping("/{id}")
     @Operation(summary = "Get transaction by ID")
-    public ResponseEntity<TransactionResponse> getTransaction(@PathVariable Long id) {
-        return ResponseEntity.ok(transactionService.getTransaction(id));
+    public ResponseEntity<TransactionResponse> getTransaction(
+            @PathVariable Long id,
+            @AuthenticationPrincipal CustomUserDetails user) {
+        return ResponseEntity.ok(transactionService.getTransaction(id, user.getId(), user.isAdmin()));
     }
 
     @GetMapping("/history")

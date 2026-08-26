@@ -32,6 +32,10 @@ public class CustomUserDetails implements UserDetails {
         return email;
     }
 
+    public boolean isAdmin() {
+        return role == Role.ADMIN;
+    }
+
     @Override
     public boolean isAccountNonExpired() { return true; }
 

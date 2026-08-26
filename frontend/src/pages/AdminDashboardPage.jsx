@@ -155,7 +155,7 @@ function Sidebar({ activeTab, onTabChange, onLogout, user, mobileOpen, onCloseMo
 
 /* ── main page ───────────────────────────────────── */
 export default function AdminDashboardPage() {
-  const { user, token, isAuthenticated, isAdmin, loading: authLoading, logout } = useAuth();
+  const { user, isAuthenticated, isAdmin, loading: authLoading, logout } = useAuth();
 
   const [activeTab, setActiveTab]     = useState('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -175,19 +175,17 @@ export default function AdminDashboardPage() {
 
   /* ── data fetchers ── */
   const loadMetrics = useCallback(async () => {
-    if (!token) return;
     try {
-      const data = await adminApi.getDashboard(token);
+      const data = await adminApi.getDashboard();
       setMetrics(data);
     } catch (err) {
       // silent for auto-refresh
     }
-  }, [token]);
+  }, []);
 
   const loadFlagged = useCallback(async (page = 0) => {
-    if (!token) return;
     try {
-      const data = await adminApi.getFlagged(page, 10, token);
+      const data = await adminApi.getFlagged(page, 10);
       const items = Array.isArray(data) ? data : (data?.content ?? []);
       setFlagged(items);
       setFlaggedTotal(data?.totalPages ?? 1);
@@ -195,12 +193,11 @@ export default function AdminDashboardPage() {
     } catch (err) {
       setError(err.message || 'Failed to load flagged transactions.');
     }
-  }, [token]);
+  }, []);
 
   const loadAccounts = useCallback(async (page = 0) => {
-    if (!token) return;
     try {
-      const data = await adminApi.getAllAccounts(page, 20, token);
+      const data = await adminApi.getAllAccounts(page, 20);
       const items = Array.isArray(data) ? data : (data?.content ?? []);
       setAllAccts(items);
       setAcctsTotal(data?.totalPages ?? 1);
@@ -208,10 +205,9 @@ export default function AdminDashboardPage() {
     } catch (err) {
       setError(err.message || 'Failed to load accounts.');
     }
-  }, [token]);
+  }, []);
 
   const loadAll = useCallback(async () => {
-    if (!token) return;
     setLoading(true);
     setError('');
     try {
@@ -225,20 +221,19 @@ export default function AdminDashboardPage() {
     } finally {
       setLoading(false);
     }
-  }, [token, loadMetrics, loadFlagged, loadAccounts]);
+  }, [loadMetrics, loadFlagged, loadAccounts]);
 
   useEffect(() => { loadAll(); }, [loadAll]);
 
   // Auto-refresh metrics every 30s
   useEffect(() => {
-    if (!token) return;
     intervalRef.current = setInterval(loadMetrics, 30000);
     return () => clearInterval(intervalRef.current);
-  }, [token, loadMetrics]);
+  }, [loadMetrics]);
 
   const handleReview = async (txnId, decision) => {
     try {
-      await adminApi.reviewTransaction(txnId, decision, token);
+      await adminApi.reviewTransaction(txnId, decision);
       // Remove from list & refresh metrics
       setFlagged((prev) => prev.filter((t) => t.id !== txnId));
       loadMetrics();

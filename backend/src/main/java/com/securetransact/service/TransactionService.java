@@ -2,6 +2,10 @@ package com.securetransact.service;
 
 import com.securetransact.dto.TransactionRequest;
 import com.securetransact.dto.TransactionResponse;
+import com.securetransact.exception.ConflictException;
+import com.securetransact.exception.ForbiddenException;
+import com.securetransact.exception.InsufficientBalanceException;
+import com.securetransact.exception.ResourceNotFoundException;
 import com.securetransact.fraud.FraudDetectionService;
 import com.securetransact.fraud.FraudResult;
 import com.securetransact.model.*;
@@ -10,6 +14,7 @@ import com.securetransact.repository.FraudLogRepository;
 import com.securetransact.repository.TransactionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
@@ -57,7 +62,10 @@ public class TransactionService {
             case TRANSFER:
                 fromAccount = getAndValidateAccount(request.getFromAccountId(), userId);
                 toAccount = accountRepository.findById(request.getToAccountId())
-                        .orElseThrow(() -> new RuntimeException("Destination account not found"));
+                        .orElseThrow(() -> new ResourceNotFoundException("Destination account not found"));
+                if (fromAccount.getId().equals(toAccount.getId())) {
+                    throw new ConflictException("Source and destination accounts must be different");
+                }
                 validateSufficientBalance(fromAccount, request.getAmount());
                 break;
         }
@@ -73,7 +81,14 @@ public class TransactionService {
                 .description(request.getDescription())
                 .build();
 
-        transaction = transactionRepository.save(transaction);
+        try {
+            transaction = transactionRepository.save(transaction);
+        } catch (DataIntegrityViolationException e) {
+            // Race condition: another request already used this idempotency key
+            Transaction existing = transactionRepository.findByIdempotencyKey(request.getIdempotencyKey())
+                    .orElseThrow(() -> new ConflictException("Duplicate idempotency key"));
+            return TransactionResponse.from(existing);
+        }
 
         // Fraud detection
         Account sourceAccount = (fromAccount != null) ? fromAccount : toAccount;
@@ -153,9 +168,19 @@ public class TransactionService {
         }
     }
 
-    public TransactionResponse getTransaction(Long transactionId) {
+    public TransactionResponse getTransaction(Long transactionId, Long userId, boolean isAdmin) {
         Transaction transaction = transactionRepository.findById(transactionId)
-                .orElseThrow(() -> new RuntimeException("Transaction not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Transaction not found"));
+
+        boolean isOwner = (transaction.getFromAccount() != null
+                        && transaction.getFromAccount().getUser().getId().equals(userId))
+                || (transaction.getToAccount() != null
+                        && transaction.getToAccount().getUser().getId().equals(userId));
+
+        if (!isOwner && !isAdmin) {
+            throw new ForbiddenException("You do not have access to this transaction");
+        }
+
         return TransactionResponse.from(transaction);
     }
 
@@ -166,14 +191,14 @@ public class TransactionService {
 
     private Account getAndValidateAccount(Long accountId, Long userId) {
         Account account = accountRepository.findById(accountId)
-                .orElseThrow(() -> new RuntimeException("Account not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Account not found"));
 
         if (!account.getUser().getId().equals(userId)) {
-            throw new RuntimeException("Unauthorized access to account");
+            throw new ForbiddenException("You do not have access to this account");
         }
 
         if (account.getStatus() != AccountStatus.ACTIVE) {
-            throw new RuntimeException("Account is not active");
+            throw new ConflictException("Account is not active");
         }
 
         return account;
@@ -181,7 +206,7 @@ public class TransactionService {
 
     private void validateSufficientBalance(Account account, BigDecimal amount) {
         if (account.getBalance().compareTo(amount) < 0) {
-            throw new RuntimeException("Insufficient balance");
+            throw new InsufficientBalanceException("Insufficient balance");
         }
     }
 }

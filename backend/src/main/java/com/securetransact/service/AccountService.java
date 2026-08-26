@@ -1,8 +1,11 @@
 package com.securetransact.service;
 
+import com.securetransact.dto.AccountLookupResponse;
 import com.securetransact.dto.AccountRequest;
 import com.securetransact.dto.AccountResponse;
 import com.securetransact.dto.TransactionResponse;
+import com.securetransact.exception.ForbiddenException;
+import com.securetransact.exception.ResourceNotFoundException;
 import com.securetransact.model.Account;
 import com.securetransact.model.AccountStatus;
 import com.securetransact.model.Transaction;
@@ -31,7 +34,7 @@ public class AccountService {
     @Transactional
     public AccountResponse createAccount(Long userId, AccountRequest request) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         String accountNumber = generateAccountNumber();
 
@@ -55,10 +58,10 @@ public class AccountService {
 
     public AccountResponse getAccountDetails(Long accountId, Long userId) {
         Account account = accountRepository.findById(accountId)
-                .orElseThrow(() -> new RuntimeException("Account not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Account not found"));
 
         if (!account.getUser().getId().equals(userId)) {
-            throw new RuntimeException("Unauthorized access to account");
+            throw new ForbiddenException("You do not have access to this account");
         }
 
         return AccountResponse.from(account);
@@ -67,10 +70,10 @@ public class AccountService {
     public List<TransactionResponse> getStatement(Long accountId, Long userId,
                                                    LocalDateTime start, LocalDateTime end) {
         Account account = accountRepository.findById(accountId)
-                .orElseThrow(() -> new RuntimeException("Account not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Account not found"));
 
         if (!account.getUser().getId().equals(userId)) {
-            throw new RuntimeException("Unauthorized access to account");
+            throw new ForbiddenException("You do not have access to this account");
         }
 
         List<Transaction> transactions = transactionRepository.findByAccountIdAndDateRange(accountId, start, end);
@@ -79,10 +82,10 @@ public class AccountService {
                 .collect(Collectors.toList());
     }
 
-    public AccountResponse lookupByAccountNumber(String accountNumber) {
+    public AccountLookupResponse lookupByAccountNumber(String accountNumber) {
         Account account = accountRepository.findByAccountNumber(accountNumber)
-                .orElseThrow(() -> new RuntimeException("Account not found"));
-        return AccountResponse.from(account);
+                .orElseThrow(() -> new ResourceNotFoundException("Account not found"));
+        return AccountLookupResponse.from(account);
     }
 
     private String generateAccountNumber() {

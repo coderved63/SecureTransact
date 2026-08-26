@@ -1,6 +1,7 @@
 package com.securetransact.dto;
 
 import com.securetransact.model.AccountType;
+import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
@@ -14,5 +15,6 @@ public class AccountRequest {
     private AccountType accountType;
 
     @DecimalMin(value = "0.0", message = "Initial deposit cannot be negative")
+    @DecimalMax(value = "99999999.99", message = "Initial deposit exceeds maximum allowed")
     private BigDecimal initialDeposit;
 }

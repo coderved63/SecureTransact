@@ -3,7 +3,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowDownLeft, ArrowUpRight, ArrowLeftRight, DollarSign, AlertTriangle, CheckCircle, Search } from 'lucide-react';
 import Modal from '../common/Modal';
 import { transactions as txnApi, accounts as accountsApi } from '../../services/api';
-import { useAuth } from '../../context/AuthContext';
 
 const TYPES = [
   { value: 'DEPOSIT',    label: 'Deposit',  icon: ArrowDownLeft,  color: 'var(--success)' },
@@ -59,7 +58,6 @@ function AccountSelect({ label, value, onChange, accounts, exclude }) {
 }
 
 export default function NewTransactionModal({ isOpen, onClose, onSuccess, accounts = [], initialType = 'DEPOSIT' }) {
-  const { token } = useAuth();
   const [type, setType] = useState(initialType);
   const [fromId, setFromId] = useState('');
   const [toId, setToId] = useState('');
@@ -88,7 +86,7 @@ export default function NewTransactionModal({ isOpen, onClose, onSuccess, accoun
     setToAccountPreview(null);
     setToId('');
     try {
-      const acct = await accountsApi.lookupByAccountNumber(toAccountNumber.trim(), token);
+      const acct = await accountsApi.lookupByAccountNumber(toAccountNumber.trim());
       setToAccountPreview(acct);
       setToId(acct.id);
     } catch {
@@ -112,7 +110,7 @@ export default function NewTransactionModal({ isOpen, onClose, onSuccess, accoun
 
     setLoading(true);
     try {
-      const txn = await txnApi.create(payload, token);
+      const txn = await txnApi.create(payload);
       setResult(txn);
     } catch (err) {
       setError(err.message || 'Transaction failed. Please try again.');

@@ -1,7 +1,7 @@
 package com.securetransact.dto;
 
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.Pattern;
 import lombok.Data;
 
 @Data
@@ -10,6 +10,9 @@ public class ChangePasswordRequest {
     private String currentPassword;
 
     @NotBlank
-    @Size(min = 8, message = "Password must be at least 8 characters")
+    @Pattern(
+            regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d).{8,64}$",
+            message = "Password must be 8-64 characters and include uppercase, lowercase, and a number"
+    )
     private String newPassword;
 }

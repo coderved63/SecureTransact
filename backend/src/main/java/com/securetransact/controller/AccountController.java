@@ -1,5 +1,6 @@
 package com.securetransact.controller;
 
+import com.securetransact.dto.AccountLookupResponse;
 import com.securetransact.dto.AccountRequest;
 import com.securetransact.dto.AccountResponse;
 import com.securetransact.dto.TransactionResponse;
@@ -43,8 +44,8 @@ public class AccountController {
     }
 
     @GetMapping("/lookup")
-    @Operation(summary = "Look up any account by account number")
-    public ResponseEntity<AccountResponse> lookupAccount(@RequestParam String accountNumber) {
+    @Operation(summary = "Look up an account by account number (minimal details only)")
+    public ResponseEntity<AccountLookupResponse> lookupAccount(@RequestParam String accountNumber) {
         return ResponseEntity.ok(accountService.lookupByAccountNumber(accountNumber));
     }
 

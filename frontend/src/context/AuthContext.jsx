@@ -1,52 +1,58 @@
 import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
-import { setUnauthorizedHandler } from '../services/api';
+import { setUnauthorizedHandler, fetchCsrfToken, userProfile, auth } from '../services/api';
 
-const STORAGE_KEY = 'st-auth';
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Hydrate from localStorage on mount
+  // Hydrate the session from the server on mount (token lives in an httpOnly cookie)
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (parsed?.token) setUser(parsed);
+    let cancelled = false;
+    const hydrate = async () => {
+      try {
+        await fetchCsrfToken();
+        const profile = await userProfile.get();
+        if (!cancelled) setUser(profile);
+      } catch {
+        if (!cancelled) setUser(null);
+      } finally {
+        if (!cancelled) setLoading(false);
       }
-    } catch {
-      localStorage.removeItem(STORAGE_KEY);
-    }
-    setLoading(false);
+    };
+    hydrate();
+    return () => { cancelled = true; };
   }, []);
 
   const login = useCallback((data) => {
-    // data = { token, email, role, firstName, lastName }
+    // data = { email, role, firstName, lastName } — token never reaches JS
+    fetchCsrfToken();
     setUser(data);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
   }, []);
 
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
+    try {
+      await auth.logout();
+    } catch {
+      // Best-effort: clear local state regardless
+    }
     setUser(null);
-    localStorage.removeItem(STORAGE_KEY);
   }, []);
 
-  // Register the 401 handler so the API layer can trigger logout on expired tokens
+  // Register the 401 handler so the API layer can trigger logout on expired sessions
   useEffect(() => {
-    setUnauthorizedHandler(logout);
+    setUnauthorizedHandler(() => logout());
     return () => setUnauthorizedHandler(null);
   }, [logout]);
 
   const value = useMemo(() => ({
     user,
-    token: user?.token ?? null,
     loading,
     login,
     logout,
     isAdmin: user?.role === 'ADMIN',
-    isAuthenticated: !!user?.token,
+    isAuthenticated: !!user,
   }), [user, loading, login, logout]);
 
   return (

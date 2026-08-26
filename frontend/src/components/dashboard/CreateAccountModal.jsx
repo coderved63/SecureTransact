@@ -3,7 +3,6 @@ import { motion } from 'framer-motion';
 import { PiggyBank, CreditCard, DollarSign } from 'lucide-react';
 import Modal from '../common/Modal';
 import { accounts as accountsApi } from '../../services/api';
-import { useAuth } from '../../context/AuthContext';
 
 const TYPES = [
   { value: 'SAVINGS',  label: 'Savings',  icon: PiggyBank,  desc: 'Earn interest on your balance' },
@@ -11,7 +10,6 @@ const TYPES = [
 ];
 
 export default function CreateAccountModal({ isOpen, onClose, onSuccess }) {
-  const { token } = useAuth();
   const [selectedType, setSelectedType] = useState('SAVINGS');
   const [deposit, setDeposit] = useState('');
   const [loading, setLoading] = useState(false);
@@ -24,7 +22,7 @@ export default function CreateAccountModal({ isOpen, onClose, onSuccess }) {
     if (isNaN(amt) || amt < 0) { setError('Enter a valid deposit amount.'); return; }
     setLoading(true);
     try {
-      const acct = await accountsApi.create({ accountType: selectedType, initialDeposit: amt }, token);
+      const acct = await accountsApi.create({ accountType: selectedType, initialDeposit: amt });
       onSuccess?.(acct);
       onClose();
       setDeposit('');

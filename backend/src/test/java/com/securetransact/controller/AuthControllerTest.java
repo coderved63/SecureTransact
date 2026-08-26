@@ -41,13 +41,14 @@ class AuthControllerTest {
         request.setFirstName("Vedant");
         request.setLastName("Mehta");
         request.setEmail("vedant@test.com");
-        request.setPassword("password123");
+        request.setPassword("Password123");
 
         mockMvc.perform(post("/api/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.token").exists())
+                .andExpect(header().exists("Set-Cookie"))
+                .andExpect(jsonPath("$.token").doesNotExist())
                 .andExpect(jsonPath("$.email").value("vedant@test.com"))
                 .andExpect(jsonPath("$.role").value("USER"));
     }
@@ -58,7 +59,7 @@ class AuthControllerTest {
         request.setFirstName("Vedant");
         request.setLastName("Mehta");
         request.setEmail("duplicate@test.com");
-        request.setPassword("password123");
+        request.setPassword("Password123");
 
         // Register first time
         mockMvc.perform(post("/api/auth/register")
@@ -66,11 +67,11 @@ class AuthControllerTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated());
 
-        // Register second time — should fail
+        // Register second time — should fail with conflict
         mockMvc.perform(post("/api/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isConflict());
     }
 
     @Test
@@ -80,7 +81,7 @@ class AuthControllerTest {
         registerRequest.setFirstName("Vedant");
         registerRequest.setLastName("Mehta");
         registerRequest.setEmail("login@test.com");
-        registerRequest.setPassword("password123");
+        registerRequest.setPassword("Password123");
 
         mockMvc.perform(post("/api/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -90,13 +91,16 @@ class AuthControllerTest {
         // Login
         LoginRequest loginRequest = new LoginRequest();
         loginRequest.setEmail("login@test.com");
-        loginRequest.setPassword("password123");
+        loginRequest.setPassword("Password123");
 
         mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(loginRequest)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.token").exists());
+                .andExpect(header().exists("Set-Cookie"))
+                .andExpect(jsonPath("$.token").doesNotExist())
+                .andExpect(jsonPath("$.email").value("login@test.com"))
+                .andExpect(jsonPath("$.role").value("USER"));
     }
 
     @Test
@@ -117,7 +121,7 @@ class AuthControllerTest {
         request.setFirstName("Vedant");
         request.setLastName("Mehta");
         request.setEmail("not-an-email");
-        request.setPassword("password123");
+        request.setPassword("Password123");
 
         mockMvc.perform(post("/api/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)

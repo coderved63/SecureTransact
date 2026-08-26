@@ -2,6 +2,7 @@ package com.securetransact.controller;
 
 import com.securetransact.dto.ChangePasswordRequest;
 import com.securetransact.dto.UpdateProfileRequest;
+import com.securetransact.exception.ResourceNotFoundException;
 import com.securetransact.model.User;
 import com.securetransact.repository.UserRepository;
 import com.securetransact.security.CustomUserDetails;
@@ -29,7 +30,7 @@ public class UserController {
     @Operation(summary = "Get current user profile")
     public ResponseEntity<?> getProfile(@AuthenticationPrincipal CustomUserDetails userDetails) {
         User user = userRepository.findById(userDetails.getId())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         return ResponseEntity.ok(Map.of(
                 "id", user.getId(),
@@ -47,7 +48,7 @@ public class UserController {
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @Valid @RequestBody UpdateProfileRequest request) {
         User user = userRepository.findById(userDetails.getId())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         user.setFirstName(request.getFirstName());
         user.setLastName(request.getLastName());
@@ -66,7 +67,7 @@ public class UserController {
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @Valid @RequestBody ChangePasswordRequest request) {
         User user = userRepository.findById(userDetails.getId())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
             return ResponseEntity.badRequest().body(Map.of("message", "Current password is incorrect"));

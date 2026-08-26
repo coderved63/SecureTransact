@@ -1,15 +1,36 @@
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+const BASE_URL = import.meta.env.VITE_API_URL || '';
 
 // Called when any API request returns 401 — registered by AuthContext
 let _onUnauthorized = null;
 export const setUnauthorizedHandler = (fn) => { _onUnauthorized = fn; };
 
-async function apiCall(endpoint, options = {}, token) {
+function getCookie(name) {
+  const match = document.cookie.match(new RegExp('(^|;\\s*)' + name + '=([^;]*)'));
+  return match ? decodeURIComponent(match[2]) : null;
+}
+
+// Forces the XSRF-TOKEN cookie to be issued (CSRF protection for cookie auth)
+export async function fetchCsrfToken() {
+  try {
+    await fetch(`${BASE_URL}/api/csrf`, { credentials: 'include' });
+  } catch {
+    // Best-effort; mutations will fail loudly if the cookie is missing
+  }
+}
+
+async function apiCall(endpoint, options = {}) {
+  const method = (options.method || 'GET').toUpperCase();
   const headers = { 'Content-Type': 'application/json' };
-  if (token) headers['Authorization'] = `Bearer ${token}`;
+
+  // CSRF token header on all state-changing requests
+  if (!['GET', 'HEAD', 'OPTIONS', 'TRACE'].includes(method)) {
+    const csrfToken = getCookie('XSRF-TOKEN');
+    if (csrfToken) headers['X-XSRF-TOKEN'] = csrfToken;
+  }
 
   const res = await fetch(`${BASE_URL}${endpoint}`, {
     ...options,
+    credentials: 'include',
     headers: { ...headers, ...options.headers },
   });
 
@@ -50,86 +71,91 @@ export const auth = {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     }),
+
+  logout: () =>
+    apiCall('/api/auth/logout', {
+      method: 'POST',
+    }),
 };
 
-// ─── Accounts (requires token) ─────────────────────────
+// ─── Accounts ─────────────────────────────────────────
 export const accounts = {
-  create: ({ accountType, initialDeposit }, token) =>
+  create: ({ accountType, initialDeposit }) =>
     apiCall('/api/accounts', {
       method: 'POST',
       body: JSON.stringify({ accountType, initialDeposit }),
-    }, token),
+    }),
 
-  getAll: (token) =>
-    apiCall('/api/accounts', {}, token),
+  getAll: () =>
+    apiCall('/api/accounts'),
 
-  getById: (id, token) =>
-    apiCall(`/api/accounts/${id}`, {}, token),
+  getById: (id) =>
+    apiCall(`/api/accounts/${id}`),
 
-  lookupByAccountNumber: (accountNumber, token) =>
-    apiCall(`/api/accounts/lookup?accountNumber=${encodeURIComponent(accountNumber)}`, {}, token),
+  lookupByAccountNumber: (accountNumber) =>
+    apiCall(`/api/accounts/lookup?accountNumber=${encodeURIComponent(accountNumber)}`),
 
-  getStatement: (id, start, end, token) => {
+  getStatement: (id, start, end) => {
     const params = new URLSearchParams();
     if (start) params.append('start', start);
     if (end) params.append('end', end);
-    return apiCall(`/api/accounts/${id}/statement?${params}`, {}, token);
+    return apiCall(`/api/accounts/${id}/statement?${params}`);
   },
 };
 
-// ─── Transactions (requires token) ─────────────────────
+// ─── Transactions ─────────────────────────────────────
 export const transactions = {
-  create: ({ type, amount, fromAccountId, toAccountId, description }, token) =>
+  create: ({ type, amount, fromAccountId, toAccountId, description }) =>
     apiCall('/api/transactions', {
       method: 'POST',
       body: JSON.stringify({ type, amount, fromAccountId, toAccountId, description }),
-    }, token),
+    }),
 
-  getById: (id, token) =>
-    apiCall(`/api/transactions/${id}`, {}, token),
+  getById: (id) =>
+    apiCall(`/api/transactions/${id}`),
 
-  getHistory: (page = 0, size = 20, token) => {
+  getHistory: (page = 0, size = 20) => {
     const params = new URLSearchParams({ page, size });
-    return apiCall(`/api/transactions/history?${params}`, {}, token);
+    return apiCall(`/api/transactions/history?${params}`);
   },
 };
 
-// ─── User Profile (requires token) ─────────────────
+// ─── User Profile ─────────────────────────────────
 export const userProfile = {
-  get: (token) =>
-    apiCall('/api/user/profile', {}, token),
+  get: () =>
+    apiCall('/api/user/profile'),
 
-  update: ({ firstName, lastName }, token) =>
+  update: ({ firstName, lastName }) =>
     apiCall('/api/user/profile', {
       method: 'PUT',
       body: JSON.stringify({ firstName, lastName }),
-    }, token),
+    }),
 
-  changePassword: ({ currentPassword, newPassword }, token) =>
+  changePassword: ({ currentPassword, newPassword }) =>
     apiCall('/api/user/change-password', {
       method: 'PUT',
       body: JSON.stringify({ currentPassword, newPassword }),
-    }, token),
+    }),
 };
 
-// ─── Admin (requires ADMIN token) ──────────────────────
+// ─── Admin ──────────────────────────────────────
 export const admin = {
-  getDashboard: (token) =>
-    apiCall('/api/admin/dashboard', {}, token),
+  getDashboard: () =>
+    apiCall('/api/admin/dashboard'),
 
-  getFlagged: (page = 0, size = 20, token) => {
+  getFlagged: (page = 0, size = 20) => {
     const params = new URLSearchParams({ page, size });
-    return apiCall(`/api/admin/fraud/flagged?${params}`, {}, token);
+    return apiCall(`/api/admin/fraud/flagged?${params}`);
   },
 
-  reviewTransaction: (id, decision, token) =>
+  reviewTransaction: (id, decision) =>
     apiCall(`/api/admin/fraud/${id}/review`, {
       method: 'PUT',
       body: JSON.stringify({ decision }),
-    }, token),
+    }),
 
-  getAllAccounts: (page = 0, size = 20, token) => {
+  getAllAccounts: (page = 0, size = 20) => {
     const params = new URLSearchParams({ page, size });
-    return apiCall(`/api/admin/accounts?${params}`, {}, token);
+    return apiCall(`/api/admin/accounts?${params}`);
   },
 };

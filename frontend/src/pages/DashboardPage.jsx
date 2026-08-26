@@ -153,7 +153,7 @@ function Sidebar({ activeTab, onTabChange, onLogout, user, mobileOpen, onCloseMo
 }
 
 /* ── settings panel ──────────────────────────────── */
-function SettingsPanel({ token, user, onProfileUpdate }) {
+function SettingsPanel({ user, onProfileUpdate }) {
   const { theme, toggle: toggleTheme } = useTheme();
 
   // Profile
@@ -183,7 +183,7 @@ function SettingsPanel({ token, user, onProfileUpdate }) {
   const handleProfileSave = async () => {
     setProfileLoading(true); setProfileMsg(''); setProfileErr('');
     try {
-      const res = await profileApi.update({ firstName, lastName }, token);
+      const res = await profileApi.update({ firstName, lastName });
       setProfileMsg('Profile updated');
       onProfileUpdate?.({ firstName: res.firstName, lastName: res.lastName });
     } catch (e) { setProfileErr(e.message || 'Failed to update profile.'); }
@@ -196,7 +196,7 @@ function SettingsPanel({ token, user, onProfileUpdate }) {
     if (newPwd !== confirmPwd) { setPwdErr('Passwords do not match.'); return; }
     setPwdLoading(true);
     try {
-      await profileApi.changePassword({ currentPassword: curPwd, newPassword: newPwd }, token);
+      await profileApi.changePassword({ currentPassword: curPwd, newPassword: newPwd });
       setPwdMsg('Password changed successfully');
       setCurPwd(''); setNewPwd(''); setConfirm('');
     } catch (e) { setPwdErr(e.message || 'Failed to change password.'); }
@@ -402,7 +402,7 @@ function SettingsPanel({ token, user, onProfileUpdate }) {
 
 /* ── main page ───────────────────────────────────── */
 export default function DashboardPage() {
-  const { user, token, isAuthenticated, loading: authLoading, logout, login } = useAuth();
+  const { user, isAuthenticated, loading: authLoading, logout, login } = useAuth();
   const showToast = useToast();
 
   const [accts, setAccts]         = useState([]);
@@ -439,7 +439,7 @@ export default function DashboardPage() {
     setStmtLoading(true);
     try {
       const fmtDate = (d) => d.length === 16 ? d + ':00' : d;
-      const data = await accountsApi.getStatement(account.id, fmtDate(firstOfMonth), fmtDate(nowStr), token);
+      const data = await accountsApi.getStatement(account.id, fmtDate(firstOfMonth), fmtDate(nowStr));
       setStmtTxns(Array.isArray(data) ? data : []);
     } catch (err) {
       setStmtError(err.message || 'Failed to load statement.');
@@ -455,20 +455,19 @@ export default function DashboardPage() {
     try {
       // Ensure ISO format: 2026-03-17T10:30:00
       const fmtDate = (d) => d.length === 16 ? d + ':00' : d;
-      const data = await accountsApi.getStatement(stmtAccount.id, fmtDate(stmtStart), fmtDate(stmtEnd), token);
+      const data = await accountsApi.getStatement(stmtAccount.id, fmtDate(stmtStart), fmtDate(stmtEnd));
       setStmtTxns(Array.isArray(data) ? data : []);
     } catch (err) {
       setStmtError(err.message || 'Failed to load statement.');
     } finally {
       setStmtLoading(false);
     }
-  }, [stmtAccount, stmtStart, stmtEnd, token]);
+  }, [stmtAccount, stmtStart, stmtEnd]);
 
   const loadTxPage = useCallback(async (page = 0) => {
-    if (!token) return;
     setTxLoading(true);
     try {
-      const t = await txnApi.getHistory(page, 10, token);
+      const t = await txnApi.getHistory(page, 10);
       const txnArr = Array.isArray(t) ? t : (t?.content ?? []);
       setTxns(txnArr);
       setTxTotal(t?.totalPages ?? 1);
@@ -478,15 +477,14 @@ export default function DashboardPage() {
     } finally {
       setTxLoading(false);
     }
-  }, [token]);
+  }, []);
 
   const load = useCallback(async () => {
-    if (!token) return;
     setDL(true);
     setError('');
     try {
       const [a] = await Promise.all([
-        accountsApi.getAll(token),
+        accountsApi.getAll(),
         loadTxPage(0),
       ]);
       setAccts(Array.isArray(a) ? a : []);
@@ -495,7 +493,7 @@ export default function DashboardPage() {
     } finally {
       setDL(false);
     }
-  }, [token, loadTxPage]);
+  }, [loadTxPage]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -816,7 +814,7 @@ export default function DashboardPage() {
           )}
 
           {/* ═══ SETTINGS TAB ═══ */}
-          {activeTab === 'settings' && <SettingsPanel token={token} user={user} onProfileUpdate={(u) => login({ ...user, ...u })} />}
+          {activeTab === 'settings' && <SettingsPanel user={user} onProfileUpdate={(u) => login({ ...user, ...u })} />}
         </main>
       </div>
 

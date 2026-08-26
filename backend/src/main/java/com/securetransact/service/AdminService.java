@@ -3,6 +3,8 @@ package com.securetransact.service;
 import com.securetransact.dto.AccountResponse;
 import com.securetransact.dto.DashboardMetricsResponse;
 import com.securetransact.dto.TransactionResponse;
+import com.securetransact.exception.ConflictException;
+import com.securetransact.exception.ResourceNotFoundException;
 import com.securetransact.model.*;
 import com.securetransact.repository.AccountRepository;
 import com.securetransact.repository.FraudLogRepository;
@@ -47,14 +49,14 @@ public class AdminService {
     @Transactional
     public TransactionResponse reviewTransaction(Long transactionId, String decision, Long adminId) {
         Transaction transaction = transactionRepository.findById(transactionId)
-                .orElseThrow(() -> new RuntimeException("Transaction not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Transaction not found"));
 
         if (transaction.getStatus() != TransactionStatus.FLAGGED) {
-            throw new RuntimeException("Transaction is not in FLAGGED status");
+            throw new ConflictException("Transaction is not in FLAGGED status");
         }
 
         FraudLog fraudLog = fraudLogRepository.findByTransactionId(transactionId)
-                .orElseThrow(() -> new RuntimeException("Fraud log not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Fraud log not found"));
 
         if ("APPROVE".equalsIgnoreCase(decision)) {
             // Process the transaction
@@ -66,7 +68,7 @@ public class AdminService {
             fraudLog.setDecision(FraudDecision.ADMIN_REJECTED);
             log.info("Admin {} rejected transaction {}", adminId, transactionId);
         } else {
-            throw new RuntimeException("Invalid decision. Use APPROVE or REJECT");
+            throw new IllegalArgumentException("Invalid decision. Use APPROVE or REJECT");
         }
 
         fraudLog.setReviewedBy(adminId);

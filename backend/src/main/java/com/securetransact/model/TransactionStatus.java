@@ -1,9 +1,12 @@
 package com.securetransact.model;
 
 public enum TransactionStatus {
-    PENDING,
-    PROCESSING,
-    COMPLETED,
+    CREATED,
+    RISK_EVALUATED,
+    APPROVED,
+    HELD_FOR_REVIEW,
+    SETTLED,
+    REJECTED,
     FAILED,
-    FLAGGED
+    REVERSED
 }
